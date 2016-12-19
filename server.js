@@ -37,6 +37,23 @@ wss.on('connection', socket => {
     updated: Date.now()
   }
 
+  socket.on('message', msg => {
+    try {
+      msg = JSON.parse(msg)
+    } catch (e) {
+      return
+    }
+
+    switch (msg.type) {
+      case 'init':
+        user.url = msg.url
+        user.ref = msg.ref
+        break
+    }
+
+    user.updated = Date.now()
+  })
+
   socket.once('close', () => {
     delete users[id]
     userCount--
@@ -46,7 +63,15 @@ wss.on('connection', socket => {
 wss.on('error', err => console.error(err))
 
 app.get('/analytics.js', (req, res) => {
-  let trackerjs = `var socket = new WebSocket('${config.wshost}');`
+  let trackerjs = `
+    var socket = new WebSocket('${config.wshost}');
+    socket.onopen = function() {
+      socket.send(JSON.stringify({
+        type: 'init',
+        url: document.location.href,
+        ref: document.referrer
+      }));
+    };`
 
   res.set('Content-Type', 'application/javascript')
   res.send(trackerjs)
