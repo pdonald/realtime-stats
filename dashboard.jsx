@@ -1,8 +1,10 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
+import { Map, Marker, Popup, TileLayer } from 'react-leaflet'
 import _ from 'lodash'
 
 import 'bootstrap/dist/css/bootstrap.css'
+//import 'leaflet/dist/leaflet.css'
 
 if (module.hot) {
   module.hot.accept()
@@ -46,6 +48,16 @@ class App extends React.Component {
           <span style={{ fontSize: '72px', fontWeight: 'bold' }}>{this.state.users.length}</span><br/>
           Users Online
         </div>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.2/dist/leaflet.css" />
+        <Map center={[0,0]} zoom={1} style={{ height: '400px', marginBottom: '20px' }}>
+          <TileLayer url='http://{s}.tile.osm.org/{z}/{x}/{y}.png'/>
+          {this.state.users.filter(u => u.ipgeo).map(u => (
+            <Marker key={u.id} position={u.ipgeo.ll}>
+              <Popup>
+                <span>{u.url}<br/>{[u.ipgeo.city, u.ipgeo.region, u.ipgeo.country].filter(x=>x).join(', ')}</span>
+              </Popup>
+            </Marker>))}
+        </Map>
         {this.renderTable('Pages', groupsort(this.state.users, u => u.url))}
         {this.renderTable('Referers', groupsort(this.state.users, u => u.ref))}
         {this.renderTable('Countries', groupsort(this.state.users, u => u.ipgeo ? u.ipgeo.country : ''))}
