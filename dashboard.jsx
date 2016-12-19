@@ -1,9 +1,15 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
+import _ from 'lodash'
+
 import 'bootstrap/dist/css/bootstrap.css'
 
 if (module.hot) {
   module.hot.accept()
+}
+
+function groupsort(array, f) {
+  return _.chain(array).countBy(f).toPairs().sortBy(p => p[1]).reverse().value()
 }
 
 class App extends React.Component {
@@ -40,7 +46,23 @@ class App extends React.Component {
           <span style={{ fontSize: '72px', fontWeight: 'bold' }}>{this.state.users.length}</span><br/>
           Users Online
         </div>
+        {this.renderTable('Pages', groupsort(this.state.users, u => u.url))}
+        {this.renderTable('Referers', groupsort(this.state.users, u => u.ref))}
+        {this.renderTable('Countries', groupsort(this.state.users, u => u.ipgeo ? u.ipgeo.country : ''))}
       </div>
+    )
+  }
+
+  renderTable(name, data) {
+    return (
+      <table className="table table-bordered table-condensed">
+      <thead>
+        <tr><th>{name}</th><th>Count</th></tr>
+      </thead>
+      <tbody>
+        {data.map(item => <tr key={item[0]}><td>{item[0] || '(none)'}</td><td>{item[1]}</td></tr>)}
+      </tbody>
+      </table>
     )
   }
 }
