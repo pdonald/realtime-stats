@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
 import { Map, Marker, Popup, TileLayer } from 'react-leaflet'
+import url from 'url'
 import _ from 'lodash'
 
 import 'bootstrap/dist/css/bootstrap.css'
@@ -12,6 +13,29 @@ if (module.hot) {
 
 function groupsort(array, f) {
   return _.chain(array).countBy(f).toPairs().sortBy(p => p[1]).reverse().value()
+}
+
+let sources = {
+  'https://t.co/': url => 'Twitter',
+  'https://www.google.': url => 'Google',
+  'https://mail.google.com': url => 'GMail',
+  'https://plus.google.com/': url => 'Google+',
+  'https://www.facebook.com': url => 'Facebook',
+  'http://feedly.com/': url => 'Feedly',
+  'https://lobste.rs/': url => 'Lobste.rs',
+  'https://news.ycombinator.com': url => 'Hacker News',
+  'https://www.reddit.com/': url => 'Reddit /r/' + url.split('/')[4],
+  'https://en.reddit.com/': url => 'Reddit /r/' + url.split('/')[4]
+}
+
+function source(url) {
+  if (!url) return '(undefined)'
+  for (let key in sources) {
+    if (url.indexOf(key) === 0) {
+      return sources[key](url)
+    }
+  }
+  return url.split('/')[2]
 }
 
 class App extends React.Component {
@@ -58,9 +82,49 @@ class App extends React.Component {
               </Popup>
             </Marker>))}
         </Map>
-        {this.renderTable('Pages', groupsort(this.state.users, u => u.url))}
-        {this.renderTable('Referers', groupsort(this.state.users, u => u.ref))}
-        {this.renderTable('Countries', groupsort(this.state.users, u => u.ipgeo ? u.ipgeo.country : ''))}
+        {this.renderTable('Pages', groupsort(this.state.users, u => url.parse(u.url).pathname))}
+        <div className="row">
+          <div className="col-md-8">
+            {this.renderTable('Referers', groupsort(this.state.users, u => u.ref))}
+          </div>
+          <div className="col-md-4">
+            {this.renderTable('Sources', groupsort(this.state.users, u => source(u.ref)))}
+          </div>
+        </div>
+        <div className="row">
+          <div className="col-md-4">
+            {this.renderTable('Countries', groupsort(this.state.users, u => u.ipgeo ? u.ipgeo.country : ''))}
+          </div>
+          <div className="col-md-4">
+            {this.renderTable('Browsers', groupsort(this.state.users, u => u.ua ? u.ua.family : ''))}
+          </div>
+          <div className="col-md-4">
+            {this.renderTable('Operating Systems', groupsort(this.state.users, u => u.ua && u.ua.os ? u.ua.os.family : ''))}
+          </div>
+        </div>
+        <table className="table table-bordered table-condensed">
+        <thead>
+        <tr>
+          <th>URL</th>
+          <th>Referrer</th>
+          <th>Browser</th>
+          <th>OS</th>
+          <th>Country</th>
+          <th>IP</th>
+        </tr>
+        </thead>
+        <tbody>
+          {this.state.users.map(u => (
+            <tr key={u.id}>
+              <td>{u.url}</td>
+              <td>{u.ref}</td>
+              <td>{u.ua ? u.ua.family : 'n/a'}</td>
+              <td>{u.ua && u.ua.os ? u.ua.os.family : 'n/a'}</td>
+              <td>{u.ipgeo ? [u.ipgeo.city, u.ipgeo.region, u.ipgeo.country].filter(x=>x).join(', ') : 'n/a'}</td>
+              <td>{u.ip}</td>
+            </tr>))}
+        </tbody>
+        </table>
       </div>
     )
   }
