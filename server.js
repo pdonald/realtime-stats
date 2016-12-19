@@ -11,6 +11,7 @@ let wss = new ws.Server({ server: server, path: '/', clientTracking: false, maxP
 
 let isProd = process.env.NODE_ENV === 'production'
 let config = {
+  auth: { user: 'user', password: 'pass' },
   port: 8080,
   wshost: 'ws://localhost:8080',
   webpack: {
@@ -124,20 +125,40 @@ app.get('/test/*', (req, res) => {
   res.send(html)
 })
 
+function isAuth(req) {
+  try {
+    let header = req.headers.authorization
+    let userpass = config.auth.user + ':' + config.auth.password
+    return header && header.indexOf('Basic ') === 0 && 
+      new Buffer(header.split(' ')[1], 'base64').toString() === userpass
+  } catch (e) {
+    return false
+  }
+}
+
+function basicAuth(req, res, next) {
+  if (isAuth(req)) {
+    return next()
+  }
+
+  res.set('WWW-Authenticate', 'Basic realm="Admin Area"')
+  setTimeout(() => res.status(401).send('Authentication required'), req.headers.authorization ? 5000 : 0)
+}
+
 let webpackDevMiddleware = require('webpack-dev-middleware')
 let webpackHotMiddleware = require('webpack-hot-middleware')
 let compiler = webpack(config.webpack)
 
-app.use(webpackDevMiddleware(compiler, {
+app.use(basicAuth, webpackDevMiddleware(compiler, {
   publicPath: config.webpack.output.publicPath,
   noInfo: true
 }))
 
 if (!isProd) {
-  app.use(webpackHotMiddleware(compiler))
+  app.use(basicAuth, webpackHotMiddleware(compiler))
 }
 
-app.get('/', (req, res) => {
+app.get('/', basicAuth, (req, res) => {
   let html = `
     <!doctype html>
     <html>
@@ -158,6 +179,7 @@ app.get('/', (req, res) => {
 let wssadmin = new ws.Server({ server: server, path: '/dashboard' })
 
 wssadmin.on('connection', socket => {
+  if (!isAuth(socket.upgradeReq)) return socket.close()
   socket.send(JSON.stringify(users))
 })
 
