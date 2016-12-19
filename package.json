@@ -1,0 +1,12 @@
+{
+  "name": "stats",
+  "version": "1.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "dependencies": {
+    "express": "^4.14.0",
+    "geoip-lite": "^1.1.8",
+    "useragent": "^2.1.9",
+    "ws": "^1.1.1"
+  }
+}
