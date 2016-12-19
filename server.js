@@ -154,3 +154,11 @@ app.get('/', (req, res) => {
 
   res.send(html)
 })
+
+let wssadmin = new ws.Server({ server: server, path: '/dashboard' })
+
+wssadmin.on('connection', socket => {
+  socket.send(JSON.stringify(users))
+})
+
+setInterval(() => wssadmin.clients.forEach(s => s.send(JSON.stringify(users))), 1000)
