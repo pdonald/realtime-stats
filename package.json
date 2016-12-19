@@ -4,9 +4,23 @@
   "private": true,
   "license": "Apache-2.0",
   "dependencies": {
+    "babel-core": "^6.21.0",
+    "babel-loader": "^6.2.10",
+    "babel-preset-es2015": "^6.18.0",
+    "babel-preset-react": "^6.16.0",
+    "bootstrap": "^3.3.7",
+    "css-loader": "^0.26.1",
     "express": "^4.14.0",
+    "file-loader": "^0.9.0",
     "geoip-lite": "^1.1.8",
+    "react": "^15.4.1",
+    "react-dom": "^15.4.1",
+    "style-loader": "^0.13.1",
+    "url-loader": "^0.5.7",
     "useragent": "^2.1.9",
+    "webpack": "^1.14.0",
+    "webpack-dev-middleware": "^1.9.0",
+    "webpack-hot-middleware": "^2.13.2",
     "ws": "^1.1.1"
   }
 }

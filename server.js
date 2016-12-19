@@ -3,14 +3,44 @@ let express = require('express')
 let ws = require('ws')
 let geoip = require('geoip-lite')
 let useragent = require('useragent')
+let webpack = require('webpack')
 
 let app = express()
 let server = http.Server(app)
 let wss = new ws.Server({ server: server, path: '/', clientTracking: false, maxPayload: 1024 })
 
+let isProd = process.env.NODE_ENV === 'production'
 let config = {
   port: 8080,
-  wshost: 'ws://localhost:8080'
+  wshost: 'ws://localhost:8080',
+  webpack: {
+    entry: ['./dashboard.jsx', !isProd && 'webpack-hot-middleware/client'].filter(x=>x),
+    output: { path: '/' },
+    module: {
+      loaders: [
+        {
+          test: /.jsx?$/,
+          loader: 'babel',
+          exclude: /node_modules/,
+          query: { presets: ['es2015', 'react'] }
+        },
+        { test: /\.css$/, loader: 'style!css' },
+        { test: /\.png$/, loader: "url" },
+        { test: /\.(woff|woff2)(\?v=\d+\.\d+\.\d+)?$/, loader: 'file' },
+        { test: /\.ttf(\?v=\d+\.\d+\.\d+)?$/, loader: 'file' },
+        { test: /\.eot(\?v=\d+\.\d+\.\d+)?$/, loader: 'file' },
+        { test: /\.svg(\?v=\d+\.\d+\.\d+)?$/, loader: 'file' }
+      ]
+    },
+    plugins: [
+      isProd ? new webpack.DefinePlugin({ 'process.env': { 'NODE_ENV': "'production'" } }) : function() {},
+      isProd ? new webpack.optimize.UglifyJsPlugin({ compress: { warnings: false } }) : function() {},
+      new webpack.optimize.OccurenceOrderPlugin(),
+      new webpack.HotModuleReplacementPlugin(),
+      new webpack.NoErrorsPlugin()
+    ],
+    devtool: !isProd && 'source-map'
+  }
 }
 
 app.disable('x-powered-by')
@@ -90,6 +120,37 @@ app.get('/test/*', (req, res) => {
       <script src="/analytics.js"></script>
     </body>
     </html>`
+
+  res.send(html)
+})
+
+let webpackDevMiddleware = require('webpack-dev-middleware')
+let webpackHotMiddleware = require('webpack-hot-middleware')
+let compiler = webpack(config.webpack)
+
+app.use(webpackDevMiddleware(compiler, {
+  publicPath: config.webpack.output.publicPath,
+  noInfo: true
+}))
+
+if (!isProd) {
+  app.use(webpackHotMiddleware(compiler))
+}
+
+app.get('/', (req, res) => {
+  let html = `
+    <!doctype html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Stats</title>
+    </head>
+    <body>
+      <div id="root"></div>
+      <script src="bundle.js"></script>
+    </body>
+    </html>
+  `
 
   res.send(html)
 })
