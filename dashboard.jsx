@@ -24,8 +24,9 @@ let sources = {
   'http://feedly.com/': url => 'Feedly',
   'https://lobste.rs/': url => 'Lobste.rs',
   'https://news.ycombinator.com': url => 'Hacker News',
-  'https://www.reddit.com/': url => 'Reddit /r/' + url.split('/')[4],
-  'https://en.reddit.com/': url => 'Reddit /r/' + url.split('/')[4]
+  'https://www.reddit.com/r/': url => 'Reddit /r/' + url.split('/')[4],
+  'https://en.reddit.com/r/': url => 'Reddit /r/' + url.split('/')[4],
+  'https://www.reddit.com/': url => 'Reddit'
 }
 
 function source(url) {
@@ -49,7 +50,7 @@ class App extends React.Component {
   }
 
   componentDidMount() {
-    this.ws = new WebSocket('ws://localhost:8080/dashboard')
+    this.ws = new WebSocket(window.config.wsdashboard)
     this.ws.onmessage = e => this.setState({ users: Object.values(JSON.parse(e.data)) })
     this.ws.onerror = e => this.setState({ error: 'WebSocket error' })
     this.ws.onclose = e => !e.wasClean && this.setState({ error: `WebSocket error: ${e.code} ${e.reason}` })
@@ -62,6 +63,7 @@ class App extends React.Component {
   render() {
     return (
       <div className="container">
+        <style>{`.table-breakable td { word-break: break-all; }`}</style>
         <h1>Real Time Stats</h1>
         {this.state.error && 
           <div className="alert alert-danger">
@@ -82,7 +84,7 @@ class App extends React.Component {
               </Popup>
             </Marker>))}
         </Map>
-        {this.renderTable('Pages', groupsort(this.state.users, u => url.parse(u.url).pathname))}
+        {this.renderTable('Pages', groupsort(this.state.users, u => u.url ? url.parse(u.url).pathname : '(undefined)'))}
         <div className="row">
           <div className="col-md-8">
             {this.renderTable('Referers', groupsort(this.state.users, u => u.ref))}
@@ -102,26 +104,26 @@ class App extends React.Component {
             {this.renderTable('Operating Systems', groupsort(this.state.users, u => u.ua && u.ua.os ? u.ua.os.family : ''))}
           </div>
         </div>
-        <table className="table table-bordered table-condensed">
+        <table className="table table-bordered table-condensed table-breakable">
         <thead>
         <tr>
-          <th>URL</th>
-          <th>Referrer</th>
+          <th style={{width:'30%'}}>URL</th>
+          <th style={{width:'25%'}}>Referrer</th>
+          <th>Load time</th>
           <th>Browser</th>
           <th>OS</th>
           <th>Country</th>
-          <th>IP</th>
         </tr>
         </thead>
         <tbody>
-          {this.state.users.map(u => (
+          {this.state.users.slice(0).reverse().map(u => (
             <tr key={u.id}>
-              <td>{u.url}</td>
+              <td>{u.url + ('scroll' in u ? ' @ ' + u.scroll + '%' : '') +  (u.focus === false ? ' no focus' : '')}</td>
               <td>{u.ref}</td>
+              <td>{u.timing ? ((u.timing.loadEventEnd-u.timing.navigationStart)/1000).toFixed(3) + 's' : 'n/a'}</td>
               <td>{u.ua ? u.ua.family : 'n/a'}</td>
               <td>{u.ua && u.ua.os ? u.ua.os.family : 'n/a'}</td>
-              <td>{u.ipgeo ? [u.ipgeo.city, u.ipgeo.region, u.ipgeo.country].filter(x=>x).join(', ') : 'n/a'}</td>
-              <td>{u.ip}</td>
+              <td>{u.ipgeo ? [u.ipgeo.city, u.ipgeo.country].filter(x=>x).join(', ') : 'n/a'}</td>
             </tr>))}
         </tbody>
         </table>
@@ -131,7 +133,7 @@ class App extends React.Component {
 
   renderTable(name, data) {
     return (
-      <table className="table table-bordered table-condensed">
+      <table className="table table-bordered table-condensed table-breakable">
       <thead>
         <tr><th>{name}</th><th>Count</th></tr>
       </thead>

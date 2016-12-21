@@ -3,46 +3,11 @@ let express = require('express')
 let ws = require('ws')
 let geoip = require('geoip-lite')
 let useragent = require('useragent')
-let webpack = require('webpack')
+let config = require('./config')
 
 let app = express()
 let server = http.Server(app)
-let wss = new ws.Server({ server: server, path: '/', clientTracking: false, maxPayload: 1024 })
-
-let isProd = process.env.NODE_ENV === 'production'
-let config = {
-  auth: { user: 'user', password: 'pass' },
-  port: 8080,
-  wshost: 'ws://localhost:8080',
-  webpack: {
-    entry: ['./dashboard.jsx', !isProd && 'webpack-hot-middleware/client'].filter(x=>x),
-    output: { path: '/' },
-    module: {
-      loaders: [
-        {
-          test: /.jsx?$/,
-          loader: 'babel',
-          exclude: /node_modules/,
-          query: { presets: ['es2015', 'react'] }
-        },
-        { test: /\.css$/, loader: 'style!css' },
-        { test: /\.png$/, loader: "url" },
-        { test: /\.(woff|woff2)(\?v=\d+\.\d+\.\d+)?$/, loader: 'file' },
-        { test: /\.ttf(\?v=\d+\.\d+\.\d+)?$/, loader: 'file' },
-        { test: /\.eot(\?v=\d+\.\d+\.\d+)?$/, loader: 'file' },
-        { test: /\.svg(\?v=\d+\.\d+\.\d+)?$/, loader: 'file' }
-      ]
-    },
-    plugins: [
-      isProd ? new webpack.DefinePlugin({ 'process.env': { 'NODE_ENV': "'production'" } }) : function() {},
-      isProd ? new webpack.optimize.UglifyJsPlugin({ compress: { warnings: false } }) : function() {},
-      new webpack.optimize.OccurenceOrderPlugin(),
-      new webpack.HotModuleReplacementPlugin(),
-      new webpack.NoErrorsPlugin()
-    ],
-    devtool: !isProd && 'source-map'
-  }
-}
+let wss = new ws.Server({ server: server, path: '/', clientTracking: false, maxPayload: 2048 })
 
 app.disable('x-powered-by')
 server.listen(config.port)
@@ -80,6 +45,11 @@ wss.on('connection', socket => {
         user.url = msg.url
         user.ref = msg.ref
         break
+      case 'update':
+        user.scroll = msg.scroll
+        user.focus = msg.focus
+        user.timing = msg.timing
+        break
     }
 
     user.updated = Date.now()
@@ -102,6 +72,16 @@ app.get('/analytics.js', (req, res) => {
         url: document.location.href,
         ref: document.referrer
       }));
+
+     var intervalID = setInterval(function() {
+       if (socket.readyState != socket.OPEN) return clearInterval(intervalID);
+       socket.send(JSON.stringify({
+         type: 'update',
+         scroll: 100.0*document.documentElement.scrollTop/document.documentElement.scrollHeight,
+         focus: 'hidden' in document ? !document.hidden : undefined,
+         timing: window.performance ? window.performance.timing.toJSON() : null
+       }));
+      }, 20000);
     };`
 
   res.set('Content-Type', 'application/javascript')
@@ -117,7 +97,7 @@ app.get('/test/*', (req, res) => {
       <title>Test Page</title>
     </head>
     <body>
-      <h1>test page</h1>
+      <h1>Test Page</h1>
       <script src="/analytics.js"></script>
     </body>
     </html>`
@@ -145,6 +125,7 @@ function basicAuth(req, res, next) {
   setTimeout(() => res.status(401).send('Authentication required'), req.headers.authorization ? 5000 : 0)
 }
 
+let webpack = require('webpack')
 let webpackDevMiddleware = require('webpack-dev-middleware')
 let webpackHotMiddleware = require('webpack-hot-middleware')
 let compiler = webpack(config.webpack)
@@ -154,7 +135,7 @@ app.use(basicAuth, webpackDevMiddleware(compiler, {
   noInfo: true
 }))
 
-if (!isProd) {
+if (!config.isProd) {
   app.use(basicAuth, webpackHotMiddleware(compiler))
 }
 
@@ -168,6 +149,7 @@ app.get('/', basicAuth, (req, res) => {
     </head>
     <body>
       <div id="root"></div>
+      <script>window.config = { wsdashboard: '${config.wsdashboard}' };</script>
       <script src="bundle.js"></script>
     </body>
     </html>
@@ -176,11 +158,19 @@ app.get('/', basicAuth, (req, res) => {
   res.send(html)
 })
 
+function sendData(socket) {
+  try {
+    socket.send(JSON.stringify(users))
+  } catch (e) {
+    return
+  }
+}
+
 let wssadmin = new ws.Server({ server: server, path: '/dashboard' })
 
 wssadmin.on('connection', socket => {
   if (!isAuth(socket.upgradeReq)) return socket.close()
-  socket.send(JSON.stringify(users))
+  sendData()
 })
 
-setInterval(() => wssadmin.clients.forEach(s => s.send(JSON.stringify(users))), 1000)
+setInterval(() => wssadmin.clients.forEach(s => sendData(s)), 1000)
