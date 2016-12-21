@@ -16,8 +16,6 @@ Install dependencies.
 npm install
 ```
 
-Edit `config` in `server.js`.
-
 Start the server.
 
 ```
@@ -26,11 +24,11 @@ node server.js
 
 Add the analytics script to your website.
 
-```
+```html
 <script src="http://localhost:8080/analytics.js"></script>
 ```
 
-See the dashboard at http://localhost:8080/
+See the dashboard at [http://localhost:8080/](http://localhost:8080/)
 
 ## License
 
