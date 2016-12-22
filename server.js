@@ -25,8 +25,7 @@ wss.on('connection', socket => {
   let ip = socket.upgradeReq.headers['x-real-ip'] || socket.upgradeReq.connection.remoteAddress
   let user = users[id] = {
     id: id,
-    host: socket.upgradeReq.headers['host'],
-    ip: ip,
+    ip: !config.anonymize ? ip : null,
     ipgeo: geoip.lookup(ip),
     ua: useragent.lookup(socket.upgradeReq.headers['user-agent']).toJSON(),
     date: Date.now(),
