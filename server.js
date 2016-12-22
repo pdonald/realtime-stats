@@ -151,6 +151,7 @@ app.get('/', basicAuth, (req, res) => {
       <div id="root"></div>
       <script>window.config = { wsdashboard: '${config.wsdashboard}' };</script>
       <script src="bundle.js"></script>
+      ${config.trackDashboard && '<script src="analytics.js"></script>'}
     </body>
     </html>
   `

@@ -8,6 +8,7 @@ module.exports = {
   port: 8080,
   wshost: 'ws://localhost:8080',
   wsdashboard: 'ws://localhost:8080/dashboard',
+  trackDashboard: false,
   webpack: {
     entry: ['./dashboard.jsx', !isProd && 'webpack-hot-middleware/client'].filter(x=>x),
     output: { path: '/' },
