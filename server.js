@@ -47,6 +47,8 @@ wss.on('connection', socket => {
       case 'update':
         user.scroll = msg.scroll
         user.focus = msg.focus
+        break
+      case 'timing':
         user.timing = msg.timing
         break
     }
@@ -72,15 +74,22 @@ app.get('/analytics.js', (req, res) => {
         ref: document.referrer
       }));
 
-     var intervalID = setInterval(function() {
-       if (socket.readyState != socket.OPEN) return clearInterval(intervalID);
-       socket.send(JSON.stringify({
-         type: 'update',
-         scroll: 100.0*document.documentElement.scrollTop/document.documentElement.scrollHeight,
-         focus: 'hidden' in document ? !document.hidden : undefined,
-         timing: window.performance ? window.performance.timing.toJSON() : null
-       }));
+      var intervalID = setInterval(function() {
+        if (socket.readyState != socket.OPEN) return clearInterval(intervalID);
+        socket.send(JSON.stringify({
+          type: 'update',
+          scroll: 100.0*document.documentElement.scrollTop/document.documentElement.scrollHeight,
+          focus: 'hidden' in document ? !document.hidden : undefined,
+        }));
       }, 20000);
+
+      setTimeout(function() {
+        if (socket.readyState != socket.OPEN) return;
+        socket.send(JSON.stringify({
+          type: 'timing',
+          timing: window.performance ? window.performance.timing.toJSON() : null
+        }));
+      }, 10000);
     };`
 
   res.set('Content-Type', 'application/javascript')
