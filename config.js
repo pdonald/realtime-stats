@@ -4,12 +4,20 @@ let isProd = process.env.NODE_ENV === 'production'
 
 module.exports = {
   isProd: isProd,
-  auth: { user: 'user', password: 'pass' },
   port: 8080,
-  wshost: 'ws://localhost:8080',
-  wsdashboard: 'ws://localhost:8080/dashboard',
-  trackDashboard: false,
-  anonymize: false,
+  analytics: {
+    wsurl: 'ws://localhost:8080',
+    anonymize: false,
+    updateInterval: 20000,
+    timingUpdateDelay: 20000,
+    consoleCountInterval: isProd ? 60000 : 10000
+  },
+  dashboard: {
+    wsurl: 'ws://localhost:8080/dashboard',
+    auth: { user: 'user', password: 'pass' },
+    broadcastInterval: 1000,
+    trackSelf: false,
+  },
   webpack: {
     entry: ['./dashboard.jsx', !isProd && 'webpack-hot-middleware/client'].filter(x=>x),
     output: { path: '/' },

@@ -16,7 +16,7 @@ let users = {}
 let userCount = 0
 let userLastID = 0
 
-setInterval(() => console.log(`Users online: ${userCount}`), 10 * 1000)
+setInterval(() => console.log(`Users online: ${userCount}`), config.analytics.consoleCountInterval)
 
 wss.on('connection', socket => {
   userCount++
@@ -25,7 +25,7 @@ wss.on('connection', socket => {
   let ip = socket.upgradeReq.headers['x-real-ip'] || socket.upgradeReq.connection.remoteAddress
   let user = users[id] = {
     id: id,
-    ip: !config.anonymize ? ip : null,
+    ip: !config.analytics.anonymize ? ip : null,
     ipgeo: geoip.lookup(ip),
     ua: useragent.lookup(socket.upgradeReq.headers['user-agent']).toJSON(),
     date: Date.now(),
@@ -66,7 +66,7 @@ wss.on('error', err => console.error(err))
 
 app.get('/analytics.js', (req, res) => {
   let trackerjs = `
-    var socket = new WebSocket('${config.wshost}');
+    var socket = new WebSocket('${config.analytics.wsurl}');
     socket.onopen = function() {
       socket.send(JSON.stringify({
         type: 'init',
@@ -81,7 +81,7 @@ app.get('/analytics.js', (req, res) => {
           scroll: 100.0*document.documentElement.scrollTop/document.documentElement.scrollHeight,
           focus: 'hidden' in document ? !document.hidden : undefined,
         }));
-      }, 20000);
+      }, ${config.analytics.updateInterval});
 
       setTimeout(function() {
         if (socket.readyState != socket.OPEN) return;
@@ -89,7 +89,7 @@ app.get('/analytics.js', (req, res) => {
           type: 'timing',
           timing: window.performance ? window.performance.timing.toJSON() : null
         }));
-      }, 10000);
+      }, ${config.analytics.timingUpdateDelay});
     };`
 
   res.set('Content-Type', 'application/javascript')
@@ -116,7 +116,7 @@ app.get('/test/*', (req, res) => {
 function isAuth(req) {
   try {
     let header = req.headers.authorization
-    let userpass = config.auth.user + ':' + config.auth.password
+    let userpass = config.dashboard.auth.user + ':' + config.dashboard.auth.password
     return header && header.indexOf('Basic ') === 0 && 
       new Buffer(header.split(' ')[1], 'base64').toString() === userpass
   } catch (e) {
@@ -157,9 +157,9 @@ app.get('/', basicAuth, (req, res) => {
     </head>
     <body>
       <div id="root"></div>
-      <script>window.config = { wsdashboard: '${config.wsdashboard}' };</script>
+      <script>window.config = { wsdashboard: '${config.dashboard.wsurl}' };</script>
       <script src="bundle.js"></script>
-      ${config.trackDashboard && '<script src="analytics.js"></script>'}
+      ${config.dashboard.trackSelf && '<script src="analytics.js"></script>'}
     </body>
     </html>
   `
@@ -182,4 +182,4 @@ wssadmin.on('connection', socket => {
   sendData()
 })
 
-setInterval(() => wssadmin.clients.forEach(s => sendData(s)), 1000)
+setInterval(() => wssadmin.clients.forEach(s => sendData(s)), config.dashboard.broadcastInterval)
