@@ -118,7 +118,7 @@ class App extends React.Component {
         <tbody>
           {this.state.users.slice(0).reverse().map(u => (
             <tr key={u.id}>
-              <td>{u.url + ('scroll' in u ? ' @ ' + u.scroll + '%' : '') +  (u.focus === false ? ' no focus' : '')}</td>
+              <td>{u.url + ('scroll' in u ? ' @ ' + Math.round(u.scroll) + '%' : '') +  (u.focus === false ? ' no focus' : '')}</td>
               <td>{u.ref}</td>
               <td>{u.timing ? ((u.timing.loadEventEnd-u.timing.navigationStart)/1000).toFixed(3) + 's' : 'n/a'}</td>
               <td>{u.ua ? u.ua.family : 'n/a'}</td>
